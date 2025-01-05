@@ -180,3 +180,4 @@ cython_debug/
 .vscode/
 audio/
 hoarder_episodes.db
+sync.sh

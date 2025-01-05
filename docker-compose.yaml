@@ -1,7 +1,6 @@
 services:
   hoarder-to-pod:
-    build: .
-    image: hoarder-to-pod
+    image: ghcr.io/derekparks/hoardertopod:latest
     ports:
       - 5002:5002
     env_file:
