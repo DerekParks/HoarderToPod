@@ -1,5 +1,5 @@
 # HoarderToPod
-Make your articles saved to your hoarder instance into a podcast!
+Get all of your hoardered articles as a podcast!
 
 Still pretty beta and rough around the edges but I'm using it everyday!
 
