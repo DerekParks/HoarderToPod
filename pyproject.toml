@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "HoarderToPod"
+version = "0.1.0"
+description = "Convert Hoarder bookmarks to a podcast"
+authors = [{ name = "Derek Parks", email = "dnparks@gmail.com" }]
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[tool.setuptools]
+packages = ["hoarderpod"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.ruff]
+line-length = 120
+exclude = [
+    '.git',
+    '__pycache__',
+    '__init__.py',
+    '.mypy_cache',
+    '.pytest_cache',
+]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long
+    "C901",  # Comprehension is too complex (11 > 10)
+    "W191", # indentation contains tabs
+]
+unfixable = ["F841"]

@@ -1,0 +1,32 @@
+services:
+  hoarder-to-pod:
+    build: .
+    image: hoarder-to-pod
+    ports:
+      - 5002:5002
+    env_file:
+      - .env
+    volumes:
+      - ./audio:/app/audio
+      - ./hoarder_episodes.db:/app/hoarder_episodes.db # can be a volume or a bind mount
+      # - ./cover.jpg:/app/cover.jpg # uncomment to use a custom cover image
+
+      # Add this to the services section to use the TTS service on the same host
+      # flasktts:
+      #   image: ghcr.io/derekparks/flasktts:latest
+      #   container_name: flasktts
+      #   restart: unless-stopped
+      #   ports:
+      #     - "5001:5001"
+      #   volumes:
+      #     - ./db:/FlaskTtS/db/
+      #     - ./style2tts_workdir:/FlaskTtS/style2tts_workdir
+      #   environment:
+      #     - HUEY_DB_PATH=/FlaskTtS/db/huey.db
+      #   deploy:
+      #     resources:
+      #       reservations:
+      #         devices:
+      #           - driver: nvidia
+      #             count: all
+      #             capabilities: [gpu]
