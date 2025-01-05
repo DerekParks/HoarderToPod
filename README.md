@@ -12,7 +12,7 @@ Poll for new messages from [hoarder](https://github.com/hoarder-app/hoarder) and
 mkdir HoarderToPod && cd HoarderToPod
 wget https://raw.githubusercontent.com/DerekParks/HoarderToPod/refs/heads/main/docker-compose.yaml
 ```
-Uncomment the FlaskTTS service section if you haven't already setup FlaskTTS.
+1b. Uncomment the FlaskTTS service section if you haven't already setup FlaskTTS.
 
 2. Set the environment variables in the .env file. See sample.env for an example.
 
