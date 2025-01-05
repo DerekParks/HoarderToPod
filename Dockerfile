@@ -8,8 +8,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY run.py .
-COPY api.py .
+ADD hoarderpod/ /app/hoarderpod
+ADD pyproject.toml .
+
+RUN pip install -e .
+
 COPY cover.jpg .
 
 CMD ["python", "hoarderpod/api.py"]
