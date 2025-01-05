@@ -1,3 +1,7 @@
+"""
+Main logic/glue for polling hoarder and generating podcast feed
+"""
+
 import os
 from datetime import datetime, timezone
 

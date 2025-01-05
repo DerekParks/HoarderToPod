@@ -1,3 +1,7 @@
+"""
+Configuration for the application
+"""
+
 import os
 
 from hoarderpod.utils import to_local_datetime

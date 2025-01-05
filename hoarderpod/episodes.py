@@ -1,3 +1,7 @@
+"""
+Database operations for episodes
+"""
+
 from datetime import datetime
 
 from sqlalchemy import JSON, Column, DateTime, String, Text, create_engine

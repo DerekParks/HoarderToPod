@@ -1,3 +1,7 @@
+"""
+API for polling hoarder and generating podcast feed
+"""
+
 import os
 
 from apscheduler.schedulers.background import BackgroundScheduler

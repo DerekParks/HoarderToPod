@@ -1,3 +1,7 @@
+"""
+Service for interacting with the Hoarder API
+"""
+
 from collections.abc import Generator
 from datetime import datetime
 

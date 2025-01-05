@@ -1,3 +1,7 @@
+"""
+Service for interacting with the TTS service
+"""
+
 import os
 
 import requests
