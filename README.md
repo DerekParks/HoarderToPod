@@ -1,7 +1,7 @@
 # HoarderToPod
-Get all of your hoardered articles as a podcast!
+Get all of your hoardered articles as a podcast.
 
-Still pretty beta and rough around the edges but I'm using it everyday!
+Still pretty beta and rough around the edges but I'm using it.
 
 Poll for new messages from [hoarder](https://github.com/hoarder-app/hoarder) and process them using [FlaskTTS](https://github.com/DerekParks/FlaskTtS/) to generate the audio.
 
