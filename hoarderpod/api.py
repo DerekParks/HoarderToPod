@@ -106,6 +106,7 @@ class Feed(Resource):
 @app.route("/feed.xml")
 @app.route("/feed.rss")
 @app.route("/rss")
+@app.route("/atom")
 def feed():
     """Hidden alternate routes to get the feed"""
     return Feed().get()

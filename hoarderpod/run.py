@@ -48,7 +48,8 @@ def get_episode_dict(bookmark: dict) -> dict:
     h = html2text.HTML2Text()
     h.ignore_links = True
 
-    html2text_text = h.handle(content["htmlContent"]) if content["htmlContent"] else None
+    html2text_text = h.handle(
+        content["htmlContent"]) if content["htmlContent"] else None
 
     if newspaper_text is None or len(html2text_text.split()) > len(newspaper_text.split()):
         text = html2text_text
@@ -84,7 +85,8 @@ def episode_to_tts_text(episode: Episode, max_length: int | None = None) -> str:
         episode: The episode to get the text for
         max_length: The maximum length of the text to return (useful testing and not having to wait for TTS)
     """
-    by_line = f"Written By {oxford_join(episode.authors)}" if len(episode.authors) > 0 else ""
+    by_line = f"Written By {oxford_join(episode.authors)}" if len(
+        episode.authors) > 0 else ""
     text = episode.text[:max_length] if max_length else episode.text
     return f"{episode.title}\n{by_line}\n\n{text}"
 
@@ -114,12 +116,14 @@ def gen_feed(episodes: list[Episode], root_url: str) -> str:
         fe.id(episode.id)
         fe.title(episode.title)
         fe.link({"href": episode.url, "rel": "alternate"})
-        fe.description(episode.url + "<br>" + episode.description)
+        fe.description(episode.url + "<br>" +
+                       (episode.description if episode.description else ""))
         fe.published(episode.created_at.replace(tzinfo=timezone.utc))
         fe.updated(episode.crawled_at.replace(tzinfo=timezone.utc))
 
         fe.author({"name": oxford_join(episode.authors)})
-        fe.enclosure(root_url + f"audio/{os.path.basename(episode.mp3)}", 0, "audio/mpeg")
+        fe.enclosure(
+            root_url + f"audio/{os.path.basename(episode.mp3)}", 0, "audio/mpeg")
         fe.podcast.itunes_image(root_url + "cover.jpg")
 
     return fg.rss_str(pretty=True)
@@ -214,9 +218,11 @@ def tts_pending_and_completed_update() -> None:
     completed_jobs = filter_job_ids_to_ones_we_know_about(completed_jobs)
 
     download_completed_tts_jobs(completed_jobs)
-    nulled_tts_jobs = episode_ops.null_episodes_that_tts_doesnt_know_about(ongoing_jobs)
+    nulled_tts_jobs = episode_ops.null_episodes_that_tts_doesnt_know_about(
+        ongoing_jobs)
     for episode_id, tts_job_id in nulled_tts_jobs:
-        print(f"Episode {episode_id} has a job id {tts_job_id} but the TTS service doesn't know about it.")
+        print(f"Episode {episode_id} has a job id {
+              tts_job_id} but the TTS service doesn't know about it.")
 
 
 def main_poll_loop(cutoff_date: datetime | None = None, max_episodes: int | None = None) -> None:
@@ -233,12 +239,14 @@ def main_poll_loop(cutoff_date: datetime | None = None, max_episodes: int | None
         cutoff_date = last_episode_date
     print(f"Cutoff date: {cutoff_date}")
 
-    update_db_with_new_episodes(hoarder_service.get_bookmarks(cutoff_date, max_episodes))
+    update_db_with_new_episodes(
+        hoarder_service.get_bookmarks(cutoff_date, max_episodes))
 
     if tts_service.check_health():
         tts_pending_and_completed_update()
 
-        episodes_to_tts = episode_ops.get_episodes_to_tts()[: Config.TTS_BATCH_SIZE]
+        episodes_to_tts = episode_ops.get_episodes_to_tts()[
+            : Config.TTS_BATCH_SIZE]
 
         submit_tts_request_for_episodes(episodes_to_tts)
 
