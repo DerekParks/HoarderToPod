@@ -59,6 +59,8 @@ def get_episode_dict(bookmark: dict) -> dict:
     html2text_text = md(
         content["htmlContent"], **markdownify_options) if content["htmlContent"] else None
 
+    # todo - use llm to describe images see ImageBlockConverter
+
     if newspaper_text is None or len(html2text_text.split()) > len(newspaper_text.split()):
         text = html2text_text
     else:
