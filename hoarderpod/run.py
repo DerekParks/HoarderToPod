@@ -5,9 +5,10 @@ Main logic/glue for polling hoarder and generating podcast feed
 import os
 from datetime import datetime, timezone
 
-import html2text
 import newspaper
 from feedgen.feed import FeedGenerator
+
+from markdownify import markdownify as md
 
 from hoarderpod.config import Config
 from hoarderpod.episodes import Episode, EpisodeOps
@@ -19,6 +20,16 @@ from hoarderpod.utils import horder_dt_to_py, oxford_join, to_local_datetime
 tts_service = TTSService()
 hoarder_service = HoarderService()
 episode_ops = EpisodeOps()
+
+markdownify_options = {
+    'strip': ['script', 'style', 'meta'],  # Remove unwanted elements
+    'heading_style': 'ATX',  # Use # for headings
+    'bullets': '*',  # Consistent bullet points
+    'escape_asterisks': True,  # Prevent TTS issues with *
+    'convert_links': 'text',  # Only keep link text
+    'remove_empty_lines': True,  # Clean formatting
+    'wrap': False  # Prevent line breaks
+}
 
 
 def get_episode_dict(bookmark: dict) -> dict:
@@ -45,11 +56,8 @@ def get_episode_dict(bookmark: dict) -> dict:
     except Exception as e:
         print(f"Error parsing article {url}: {e} with newspaper4k")
 
-    h = html2text.HTML2Text()
-    h.ignore_links = True
-
-    html2text_text = h.handle(
-        content["htmlContent"]) if content["htmlContent"] else None
+    html2text_text = md(
+        content["htmlContent"], **markdownify_options) if content["htmlContent"] else None
 
     if newspaper_text is None or len(html2text_text.split()) > len(newspaper_text.split()):
         text = html2text_text
