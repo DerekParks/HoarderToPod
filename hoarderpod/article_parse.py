@@ -131,7 +131,10 @@ def get_episode_dict(bookmark: dict) -> dict:
     else:
         title = newspaper_data["title"]
 
-    if newspaper_data["description"] is None or len(content["description"]) > len(newspaper_data["description"]):
+    if newspaper_data["description"] is None and content["description"] is None:
+        description = ""
+
+    elif newspaper_data["description"] is None or len(content["description"]) > len(newspaper_data["description"]):
         description = content["description"]
     else:
         description = newspaper_data["description"]
