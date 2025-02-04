@@ -20,9 +20,15 @@ class PATHS:
 class HoarderService:
     """Service for interacting with the Hoarder API."""
 
-    def __init__(self):
-        self.root_url = Config.HOARDER_ROOT_URL
-        self.api_key = Config.HOARDER_API_KEY
+    def __init__(self, root_url: str | None = None, api_key: str | None = None):
+        if root_url is None:
+            root_url = Config.HOARDER_ROOT_URL
+
+        if api_key is None:
+            api_key = Config.HOARDER_API_KEY
+
+        self.root_url = root_url
+        self.api_key = api_key
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",

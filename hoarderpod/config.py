@@ -11,6 +11,8 @@ class Config:
     """Configuration for the application."""
 
     TTS_ROOT_URL = os.getenv("TTS_ROOT_URL", "http://localhost:5001")
+    TTS_MODEL = os.getenv("TTS_MODEL", "kokoro")
+    TTS_VOICE = os.getenv("TTS_VOICE", "af_heart")
     MP3_STORAGE_PATH = os.path.join(os.path.dirname(__file__), os.getenv("MP3_STORAGE_PATH", "../audio"))
     POLL_INTERVAL_MINUTES = int(os.getenv("POLL_INTERVAL_MINUTES", "10"))
     FLASK_ENV = os.getenv("FLASK_ENV")

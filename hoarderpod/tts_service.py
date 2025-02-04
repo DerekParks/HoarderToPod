@@ -44,7 +44,15 @@ class TTSService:
         Returns:
             str: The job id of the TTS request
         """
-        response = requests.post(self.synthesize_path, json={"text": text})
+
+        opts = {"text": text, "model": Config.TTS_MODEL}
+        if Config.TTS_VOICE and len(Config.TTS_VOICE) > 0:
+            opts["voice"] = Config.TTS_VOICE
+
+        response = requests.post(
+            self.synthesize_path,
+            json=opts,
+        )
         response.raise_for_status()
         return response.json()["job_id"]
 
