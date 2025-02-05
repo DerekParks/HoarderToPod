@@ -11,7 +11,7 @@ markdownify_options = {
     "bullets": "*",  # Consistent bullet points
     "convert_links": "text",  # Only keep link text
     "remove_empty_lines": True,  # Keep empty lines
-    "wrap": True,  # Prevent line breaks
+    "wrap": False,  # Prevent line breaks
     "strip_emphasis": True,
 }
 

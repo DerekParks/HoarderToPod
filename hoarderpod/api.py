@@ -74,6 +74,23 @@ class Episode(Resource):
         return "OK"
 
 
+@ns.route("/tts/<episode_id>")
+class Episode(Resource):
+    @ns.doc("request_new_tts")
+    def delete(self, episode_id):
+        """Request new TTS run for an episode"""
+        if episode_id not in episode_ops.get_episode_ids():
+            return "Episode not found", 404
+
+        mp3_path = episode_ops.get_episode_mp3(episode_id)
+        if mp3_path and os.path.exists(mp3_path):
+            os.remove(mp3_path)
+
+        episode_ops.clear_tts(episode_id)
+        poll_hoarder_and_tts()
+        return "OK"
+
+
 @ns.route("/tts_waiting")
 class TTSWaiting(Resource):
     @ns.doc("list_episodes_waiting_for_tts")

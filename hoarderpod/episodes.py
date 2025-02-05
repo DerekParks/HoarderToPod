@@ -160,3 +160,27 @@ class EpisodeOps:
         with Session() as session:
             episode = session.query(Episode).order_by(Episode.created_at.desc()).first()
             return to_utc(episode.created_at) if episode else None
+
+    def clear_tts(self, episode_id: str):
+        """Clear the TTS job id and MP3 Path for an episode.
+
+        Args:
+            episode_id: The episode id to clear
+        """
+        with Session() as session:
+            episode = session.query(Episode).filter_by(id=episode_id).first()
+            episode.tts_job_id = None
+            episode.mp3 = None
+            session.commit()
+
+    def get_episode_mp3(self, episode_id: str) -> str | None:
+        """Get an episode's mp3 path by id.
+
+        Args:
+            episode_id: The episode id
+
+        Returns:
+            str: The mp3 path
+        """
+        with Session() as session:
+            return session.query(Episode).filter_by(id=episode_id).first().mp3

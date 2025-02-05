@@ -1,7 +1,7 @@
 # HoarderToPod
 Get all of your hoardered articles as a podcast.
 
-Still pretty beta and rough around the edges but I'm using it.
+Still pretty beta and rough around the edges but I've been using it daily for a month now. (PRs welcome)
 
 Poll for new messages from [hoarder](https://github.com/hoarder-app/hoarder) and process them using [FlaskTTS](https://github.com/DerekParks/FlaskTtS/) to generate the audio.
 
@@ -70,8 +70,8 @@ python hoarderpod/run.py
 ```
 
 ## Roadmap (Todo)
-- Tests, we could use some
+- Tests, I added a few but more coverage especially around scraping/parsing
 - Better scaping and html to text conversion
 - Add some CSS to the UI
 - Get done notifications from FlaskTTS instead of polling
-- Add a web interface for managing episodes
+- Add a web interface for managing episodes (Kind of exists now but could be better)
