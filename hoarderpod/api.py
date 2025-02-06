@@ -68,6 +68,7 @@ class Episode(Resource):
     @ns.doc("delete_episode")
     def delete(self, episode_id):
         """Delete an episode"""
+        print("Deleting episode", episode_id)
         num_deleted = episode_ops.delete_episode(episode_id)
         if num_deleted == 0:
             return "Episode not found", 404
@@ -79,6 +80,9 @@ class Episode(Resource):
     @ns.doc("request_new_tts")
     def delete(self, episode_id):
         """Request new TTS run for an episode"""
+
+        print("Requesting new TTS run for episode", episode_id)
+
         if episode_id not in episode_ops.get_episode_ids():
             return "Episode not found", 404
 
