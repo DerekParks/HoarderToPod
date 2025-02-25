@@ -5,6 +5,12 @@ Still pretty beta and rough around the edges but I've been using it daily for a 
 
 Poll for new messages from [hoarder](https://github.com/hoarder-app/hoarder) and process them using [FlaskTTS](https://github.com/DerekParks/FlaskTtS/) to generate the audio.
 
+## Screenshot
+<p align="center">
+    <img src="docs/screenshot1.png" alt="Screenshot" width="300">
+</p>
+
+
 ## Docker installation (recommended)
 
 1. Get the compose file:
