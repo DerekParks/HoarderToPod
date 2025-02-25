@@ -7,7 +7,7 @@ Poll for new messages from [hoarder](https://github.com/hoarder-app/hoarder) and
 
 ## Screenshot
 <p align="center">
-    <img src="docs/screenshot1.png" alt="Screenshot" width="300">
+    <img src="https://raw.githubusercontent.com/DerekParks/HoarderToPod/refs/heads/main/docs/screenshot1.png" alt="Screenshot" width="300">
 </p>
 
 
