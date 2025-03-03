@@ -139,6 +139,12 @@ def cover():
     return send_file(os.path.join(app.root_path, "../cover.jpg"), mimetype="image/jpeg")
 
 
+@app.route("/feed.svg")
+def feed_img():
+    """Get the feed image"""
+    return send_file(os.path.join(app.root_path, "../feed.svg"), mimetype="image/svg+xml")
+
+
 @app.route("/audio/<path:filename>")
 def serve_audio(filename):
     """Serve audio files"""

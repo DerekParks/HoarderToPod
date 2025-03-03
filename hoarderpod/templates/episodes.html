@@ -47,11 +47,29 @@
     <body class="bg-gray-100 min-h-screen font-sans">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <header class="mb-8">
-                <div class="flex justify-between items-center">
+                <div class="flex items-center">
                     <h1
                         class="text-3xl font-extrabold text-gray-900 sm:text-4xl"
                     >
                         <span class="text-indigo-600">Episodes</span>
+
+                        <a
+                            href="/feed"
+                            class="ml-3 flex-shrink-0"
+                            style="
+                                width: 16px;
+                                height: 16px;
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
+                            "
+                        >
+                            <img
+                                src="/feed.svg"
+                                alt="RSS Feed"
+                                style="max-width: 16px; max-height: 16px"
+                            />
+                        </a>
                     </h1>
                 </div>
             </header>
@@ -148,18 +166,20 @@
                                         <span
                                             title="{{ episode.tts_job_id }}"
                                             class="cursor-help"
-                                            >{{ episode.tts_job_id[:8] }}{% if
+                                            >{% if episode.tts_job_id %}{{
+                                            episode.tts_job_id[:8] }}{% if
                                             episode.tts_job_id|length > 8
-                                            %}...{% endif %}</span
+                                            %}...{% endif %}{% endif %}</span
                                         >
                                     </a>
                                     {% else %}
                                     <span
                                         title="{{ episode.tts_job_id }}"
                                         class="cursor-help"
-                                        >{{ episode.tts_job_id[:8] }}{% if
+                                        >{% if episode.tts_job_id %}{{
+                                        episode.tts_job_id[:8] }}{% if
                                         episode.tts_job_id|length > 8 %}...{%
-                                        endif %}</span
+                                        endif %}{% endif %}</span
                                     >
                                     {% endif %}
                                 </td>
