@@ -56,3 +56,17 @@ def horder_dt_to_py(horder_datetime: str) -> datetime:
         horder_datetime: The Hoarder datetime
     """
     return datetime.strptime(horder_datetime, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+
+def remove_www(url):
+    """
+    Remove 'www.' from the beginning of a string if it exists.
+
+    Args:
+        url (str): The input string (typically a URL)
+
+    Returns:
+        str: The string with 'www.' removed if it was at the beginning
+    """
+    if url.startswith("www."):
+        return url[4:]
+    return url

@@ -1,3 +1,4 @@
+import re
 """
 Main logic/glue for polling hoarder and generating podcast feed
 """
@@ -11,8 +12,10 @@ from hoarderpod.article_parse import get_episode_dict
 from hoarderpod.config import Config
 from hoarderpod.episodes import Episode, EpisodeOps
 from hoarderpod.hoarder_service import HoarderService
+from hoarderpod.archive_scraper import get_latest_snapshot, snapshot
 from hoarderpod.tts_service import TTSService
-from hoarderpod.utils import oxford_join, to_local_datetime
+from hoarderpod.utils import oxford_join, to_local_datetime, remove_www
+from urllib.parse import urlparse
 
 # Initialize services
 tts_service = TTSService()
@@ -84,6 +87,16 @@ def update_db_with_new_episodes(bookmarks: list[dict]) -> None:
             or bookmark["content"]["url"] is None
         ):
             continue
+
+        if urlparse(remove_www(bookmark["content"]["url"]).netloc) in Config.ARCHIVE_PH_DOMAINS:
+            latest_snapshot = get_latest_snapshot(bookmark["content"]["url"])
+            if latest_snapshot:
+                bookmark["content"]["url"] = latest_snapshot
+            else:
+                snapshot(bookmark["content"]["url"], complete=False)
+                print(f"No snapshot found for {bookmark["content"]["url"]}... requesting one")
+                print("Skipping TTS until next run")
+                continue
 
         if bookmark["id"] in known_ids:
             continue
