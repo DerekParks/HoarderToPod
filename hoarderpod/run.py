@@ -91,6 +91,7 @@ def update_db_with_new_episodes(bookmarks: list[dict]) -> None:
         if remove_www(urlparse(bookmark["content"]["url"]).netloc) in Config.ARCHIVE_PH_DOMAINS:
             latest_snapshot = get_latest_snapshot(bookmark["content"]["url"])
             if latest_snapshot:
+                print(f"overwriting {bookmark["content"]["url"]} with {latest_snapshot}")
                 bookmark["content"]["url"] = latest_snapshot
             else:
                 snapshot(bookmark["content"]["url"], complete=False)
