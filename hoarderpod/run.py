@@ -88,7 +88,7 @@ def update_db_with_new_episodes(bookmarks: list[dict]) -> None:
         ):
             continue
 
-        if urlparse(remove_www(bookmark["content"]["url"]).netloc) in Config.ARCHIVE_PH_DOMAINS:
+        if remove_www(urlparse(bookmark["content"]["url"]).netloc) in Config.ARCHIVE_PH_DOMAINS:
             latest_snapshot = get_latest_snapshot(bookmark["content"]["url"])
             if latest_snapshot:
                 bookmark["content"]["url"] = latest_snapshot
