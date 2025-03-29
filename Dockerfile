@@ -9,6 +9,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 ADD hoarderpod/ /app/hoarderpod
+ADD feed.svg .
 ADD pyproject.toml .
 
 RUN pip install -e .
