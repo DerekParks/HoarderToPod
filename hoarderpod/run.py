@@ -184,7 +184,7 @@ def main_poll_loop(cutoff_date: datetime | None = None, max_episodes: int | None
         max_episodes: The maximum number of episodes to update the database with
     """
 
-    last_episode_date = episode_ops.get_latest_episode_date()
+    last_episode_date = episode_ops.get_latest_episode_date() or datetime.fromtimestamp(0, tz=timezone.utc)
     print(f"Last episode date: {last_episode_date}")
     if cutoff_date is None or last_episode_date > cutoff_date:
         cutoff_date = last_episode_date
