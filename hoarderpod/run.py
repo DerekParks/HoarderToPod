@@ -14,7 +14,7 @@ from hoarderpod.episodes import Episode, EpisodeOps
 from hoarderpod.hoarder_service import HoarderService
 from hoarderpod.archive_scraper import get_latest_snapshot, snapshot
 from hoarderpod.tts_service import TTSService
-from hoarderpod.utils import oxford_join, to_local_datetime, remove_www
+from hoarderpod.utils import oxford_join, to_local_datetime, remove_www, sanitize_xml_string
 from urllib.parse import urlparse
 
 # Initialize services
@@ -46,25 +46,27 @@ def gen_feed(episodes: list[Episode], root_url: str) -> str:
         str: The path to the RSS feed
     """
     fg = FeedGenerator()
-    fg.id(Config.HOARDER_ROOT_URL)
-    fg.title("Hoarder Articles")
-    fg.link(href=Config.HOARDER_ROOT_URL, rel="alternate")
+    fg.id(sanitize_xml_string(Config.HOARDER_ROOT_URL))
+    fg.title(sanitize_xml_string("Hoarder Articles"))
+    fg.link(href=sanitize_xml_string(Config.HOARDER_ROOT_URL), rel="alternate")
     fg.language("en")
-    fg.description("Hoarder Articles")
+    fg.description(sanitize_xml_string("Hoarder Articles"))
     fg.load_extension("podcast")
-    fg.podcast.itunes_author("Hoarder")
+    fg.podcast.itunes_author(sanitize_xml_string("Hoarder"))
     fg.podcast.itunes_image(root_url + "cover.jpg")
 
     for episode in episodes:
         fe = fg.add_entry()
-        fe.id(episode.id)
-        fe.title(episode.title)
-        fe.link({"href": episode.url, "rel": "alternate"})
-        fe.description(episode.url + "<br>" + (episode.description if episode.description else ""))
+        fe.id(sanitize_xml_string(episode.id))
+        fe.title(sanitize_xml_string(episode.title))
+        fe.link({"href": sanitize_xml_string(episode.url), "rel": "alternate"})
+        description_text = sanitize_xml_string(episode.url) + "<br>" + sanitize_xml_string(episode.description if episode.description else "")
+        fe.description(description_text)
         fe.published(episode.created_at.replace(tzinfo=timezone.utc))
         fe.updated(episode.crawled_at.replace(tzinfo=timezone.utc))
 
-        fe.author({"name": oxford_join(episode.authors)})
+        authors_list = episode.authors if episode.authors else []
+        fe.author({"name": sanitize_xml_string(oxford_join(authors_list))})
         fe.enclosure(root_url + f"audio/{os.path.basename(episode.mp3)}", 0, "audio/mpeg")
         fe.podcast.itunes_image(root_url + "cover.jpg")
 

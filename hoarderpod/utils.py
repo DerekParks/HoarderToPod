@@ -70,3 +70,41 @@ def remove_www(url):
     if url.startswith("www."):
         return url[4:]
     return url
+
+
+def sanitize_xml_string(text: str | None) -> str:
+    """Sanitize a string to be XML compatible by removing invalid characters.
+    
+    XML 1.0 does not allow:
+    - NULL bytes (\x00)
+    - Control characters (0x01-0x1F) except tab (0x09), newline (0x0A), and carriage return (0x0D)
+    - Characters 0xFFFE and 0xFFFF
+    
+    Args:
+        text: The string to sanitize
+        
+    Returns:
+        str: The sanitized string, or empty string if input is None
+    """
+    if text is None:
+        return ""
+    
+    # Convert to string if not already
+    text = str(text)
+    
+    # Remove NULL bytes
+    text = text.replace('\x00', '')
+    
+    # Remove invalid control characters (keep tab, newline, carriage return)
+    result = []
+    for char in text:
+        code = ord(char)
+        # Keep valid characters: tab (9), newline (10), carriage return (13), and printable chars (>= 32)
+        # Also exclude 0xFFFE and 0xFFFF
+        if code == 9 or code == 10 or code == 13 or (code >= 32 and code != 0xFFFE and code != 0xFFFF):
+            result.append(char)
+        # Replace other control characters with a space
+        elif code < 32:
+            result.append(' ')
+    
+    return ''.join(result)

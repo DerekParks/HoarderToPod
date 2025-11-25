@@ -119,6 +119,8 @@ class Feed(Resource):
     def get(self):
         """Get the feed"""
         episodes = episode_ops.get_episodes_with_mp3()
+        # Limit to most recent episodes (reverse order since episodes are sorted oldest first)
+        episodes = episodes[-Config.FEED_MAX_EPISODES:] if len(episodes) > Config.FEED_MAX_EPISODES else episodes
         feed_str = gen_feed(episodes, request.url_root)
         return Response(feed_str, mimetype="application/rss+xml")
 
