@@ -1,9 +1,11 @@
 import re
 
 import newspaper
+import requests
 from markdownify import MarkdownConverter
 
 from hoarderpod.utils import horder_dt_to_py
+from hoarderpod.config import Config
 
 markdownify_options = {
     "strip": ["script", "style", "meta", "a", "img", "strong"],  # Remove unwanted elements
@@ -104,6 +106,29 @@ def html2text(html: str) -> str:
     return transform_markdown(md(html, **markdownify_options))
 
 
+def fetch_asset_content(asset_id: str) -> str | None:
+    """Fetch HTML content from Hoarder asset API.
+
+    Args:
+        asset_id: The asset ID to fetch
+
+    Returns:
+        str: The HTML content from the asset, or None if fetch fails
+    """
+    try:
+        url = f"{Config.HOARDER_ROOT_URL}/api/v1/assets/{asset_id}"
+        headers = {
+            "Authorization": f"Bearer {Config.HOARDER_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        print(f"Error fetching asset {asset_id}: {e}")
+        return None
+
+
 def get_episode_dict(bookmark: dict) -> dict:
     """Get the episode dict including text, title, description, and authors of a bookmark.
 
@@ -117,7 +142,18 @@ def get_episode_dict(bookmark: dict) -> dict:
     url = content["url"]
 
     newspaper_data = parse_with_newspaper(url)
-    html2text_text = html2text(content["htmlContent"]) if content["htmlContent"] else ""
+
+    # Get HTML content - either from inline htmlContent or from asset
+    html_content = content.get("htmlContent")
+    if not html_content:
+        # For SingleFile articles, content is stored as an asset
+        # Try contentAssetId first, then precrawledArchiveAssetId
+        asset_id = content.get("contentAssetId") or content.get("precrawledArchiveAssetId")
+        if asset_id:
+            print(f"Fetching asset content for bookmark {bookmark['id']}, asset {asset_id}")
+            html_content = fetch_asset_content(asset_id)
+
+    html2text_text = html2text(html_content) if html_content else ""
 
     # todo - use llm to describe images see ImageBlockConverter
 
