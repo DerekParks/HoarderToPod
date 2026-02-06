@@ -1,6 +1,6 @@
 from unittest.mock import Mock, patch
 
-from hoarderpod.article_parse import transform_markdown, fetch_asset_content, get_episode_dict
+from hoarderpod.article_parse import transform_markdown, fetch_asset_content, get_episode_dict, clean_text_for_tts, html2text
 
 
 def test_markdown_strip_test():
@@ -22,6 +22,38 @@ This *book title* is in italics
     assert "Section:" in markdown_text
     assert "* List item" in markdown_text
     assert "italic:" in markdown_text
+
+
+def test_clean_text_for_tts():
+    """Test that problematic Unicode characters are cleaned for TTS."""
+    # Test non-breaking spaces
+    text_with_nbsp = "This\xa0is\xa0text"
+    cleaned = clean_text_for_tts(text_with_nbsp)
+    assert "\xa0" not in cleaned
+    assert cleaned == "This is text"
+
+    # Test multiple spaces collapsed
+    text_with_spaces = "This   has    many     spaces"
+    cleaned = clean_text_for_tts(text_with_spaces)
+    assert cleaned == "This has many spaces"
+
+    # Test zero-width and other special spaces
+    text_with_special = "Word\u200bwith\u2009special\u202fspaces"
+    cleaned = clean_text_for_tts(text_with_special)
+    assert "\u200b" not in cleaned
+    assert "\u2009" not in cleaned
+    assert "\u202f" not in cleaned
+
+
+def test_html2text_cleans_nbsp_entities():
+    """Test that HTML entities like &nbsp; are properly cleaned for TTS."""
+    html_with_nbsp = "<p>This&nbsp;has&nbsp;nbsp&nbsp;entities.</p>"
+    result = html2text(html_with_nbsp)
+
+    # Should not contain the Unicode non-breaking space character
+    assert "\xa0" not in result
+    # Should contain the actual text with regular spaces
+    assert "This has nbsp entities" in result
 
 
 @patch("hoarderpod.article_parse.requests.get")

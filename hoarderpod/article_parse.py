@@ -94,6 +94,36 @@ def parse_with_newspaper(url: str) -> dict:
         return {"authors": [], "title": None, "text": None, "description": None}
 
 
+# Translation table for cleaning problematic Unicode characters for TTS
+TTS_CLEAN_TABLE = str.maketrans({
+    '\xa0': ' ',      # non-breaking space (&nbsp;)
+    '\u200b': '',     # zero-width space
+    '\u2009': ' ',    # thin space
+    '\u202f': ' ',    # narrow no-break space
+    '\u2007': ' ',    # figure space
+    '\u2008': ' ',    # punctuation space
+    '\u200a': ' ',    # hair space
+})
+
+
+def clean_text_for_tts(text: str) -> str:
+    """Clean text to remove characters that cause issues with TTS.
+
+    Args:
+        text: The text to clean
+
+    Returns:
+        str: The cleaned text
+    """
+    # Replace problematic Unicode spaces with regular spaces or remove them
+    text = text.translate(TTS_CLEAN_TABLE)
+
+    # Replace multiple spaces with single space
+    text = re.sub(r' +', ' ', text)
+
+    return text
+
+
 def html2text(html: str) -> str:
     """Convert HTML to text using markdownify.
 
@@ -103,7 +133,9 @@ def html2text(html: str) -> str:
     Returns:
         str: The text converted from the HTML
     """
-    return transform_markdown(md(html, **markdownify_options))
+    markdown = md(html, **markdownify_options)
+    transformed = transform_markdown(markdown)
+    return clean_text_for_tts(transformed)
 
 
 def fetch_asset_content(asset_id: str) -> str | None:
