@@ -1,4 +1,5 @@
 import re
+import unicodedata
 
 import newspaper
 import requests
@@ -100,31 +101,44 @@ def parse_with_newspaper(url: str, html: str | None = None) -> dict:
         return {"authors": [], "title": None, "text": None, "description": None}
 
 
-# Translation table for cleaning problematic Unicode characters for TTS
-TTS_CLEAN_TABLE = str.maketrans({
-    '\xa0': ' ',      # non-breaking space (&nbsp;)
-    '\u200b': '',     # zero-width space
-    '\u2009': ' ',    # thin space
-    '\u202f': ' ',    # narrow no-break space
-    '\u2007': ' ',    # figure space
-    '\u2008': ' ',    # punctuation space
-    '\u200a': ' ',    # hair space
-})
-
-
 def clean_text_for_tts(text: str) -> str:
     """Clean text to remove characters that cause issues with TTS.
+
+    Uses Unicode normalization (NFKC) to systematically handle most compatibility
+    characters, plus targeted replacements for punctuation that affects TTS.
 
     Args:
         text: The text to clean
 
     Returns:
-        str: The cleaned text
+        str: The cleaned text safe for TTS
     """
-    # Replace problematic Unicode spaces with regular spaces or remove them
-    text = text.translate(TTS_CLEAN_TABLE)
+    # Step 1: NFKC normalization handles compatibility characters automatically
+    # This converts: non-breaking spaces, full-width characters, ligatures, etc.
+    text = unicodedata.normalize('NFKC', text)
 
-    # Replace multiple spaces with single space
+    # Step 2: Handle punctuation and special characters that NFKC doesn't normalize
+    # Replace various quotation marks and problematic characters with ASCII equivalents
+    quote_replacements = {
+        '\u2018': "'",  # ' left single quotation mark
+        '\u2019': "'",  # ' right single quotation mark (curly apostrophe)
+        '\u201a': "'",  # ‚ single low-9 quotation mark
+        '\u201b': "'",  # ‛ single high-reversed-9 quotation mark
+        '\u201c': '"',  # " left double quotation mark
+        '\u201d': '"',  # " right double quotation mark
+        '\u201e': '"',  # „ double low-9 quotation mark
+        '\u201f': '"',  # ‟ double high-reversed-9 quotation mark
+        '\u2032': "'",  # ′ prime
+        '\u2033': '"',  # ″ double prime
+        '\u2013': '-',  # – en dash
+        '\u2014': '-',  # — em dash
+        '\u200b': '',   # zero-width space (remove)
+    }
+
+    for unicode_char, ascii_char in quote_replacements.items():
+        text = text.replace(unicode_char, ascii_char)
+
+    # Step 3: Collapse multiple spaces
     text = re.sub(r' +', ' ', text)
 
     return text
@@ -227,7 +241,8 @@ def get_episode_dict(bookmark: dict) -> dict:
     if newspaper_data["text"] is None or len(html2text_text.split()) > len(newspaper_data["text"].split()):
         text = html2text_text
     else:
-        text = newspaper_data["text"]
+        # Clean newspaper text for TTS (handles curly quotes, Unicode spaces, etc.)
+        text = clean_text_for_tts(newspaper_data["text"])
 
     if newspaper_data["title"] is None or len(content["title"]) > len(newspaper_data["title"]):
         title = content["title"]

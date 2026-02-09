@@ -44,6 +44,20 @@ def test_clean_text_for_tts():
     assert "\u2009" not in cleaned
     assert "\u202f" not in cleaned
 
+    # Test curly quotes/apostrophes converted to straight quotes
+    text_with_curly = "It\u2019s a test\u2014won\u2019t work"  # curly apostrophes
+    cleaned = clean_text_for_tts(text_with_curly)
+    assert "\u2019" not in cleaned
+    assert "It's a test" in cleaned
+    assert "won't work" in cleaned
+
+    # Test curly double quotes
+    text_with_quotes = "\u201cQuoted text\u201d here"
+    cleaned = clean_text_for_tts(text_with_quotes)
+    assert "\u201c" not in cleaned
+    assert "\u201d" not in cleaned
+    assert '"Quoted text" here' in cleaned
+
 
 def test_html2text_cleans_nbsp_entities():
     """Test that HTML entities like &nbsp; are properly cleaned for TTS."""
