@@ -8,7 +8,7 @@ from hoarderpod.utils import horder_dt_to_py
 from hoarderpod.config import Config
 
 markdownify_options = {
-    "strip": ["script", "style", "meta", "a", "img", "strong"],  # Remove unwanted elements
+    "strip": ["script", "style", "meta", "a", "img", "strong", "template", "svg", "noscript"],  # Remove unwanted elements
     "heading_style": "ATX",  # Use # for headings
     "bullets": "*",  # Consistent bullet points
     "convert_links": "text",  # Only keep link text
@@ -70,18 +70,24 @@ def transform_markdown(text):
     return "\n".join(processed_lines)
 
 
-def parse_with_newspaper(url: str) -> dict:
+def parse_with_newspaper(url: str, html: str | None = None) -> dict:
     """Parse article content using newspaper4k.
 
     Args:
         url: The URL to parse
+        html: Optional HTML content to parse instead of downloading from URL
 
     Returns:
         dict: Dictionary containing parsed authors, title, text and description
     """
     try:
         article = newspaper.Article(url)
-        article.download()
+        if html:
+            # If HTML is provided, set it directly and parse
+            article.html = html
+            article.is_downloaded = True
+        else:
+            article.download()
         article.parse()
         return {
             "authors": article.authors,
@@ -124,6 +130,30 @@ def clean_text_for_tts(text: str) -> str:
     return text
 
 
+def preprocess_html(html: str) -> str:
+    """Remove problematic HTML elements before markdown conversion.
+
+    Args:
+        html: The raw HTML to preprocess
+
+    Returns:
+        str: HTML with problematic elements removed
+    """
+    # Remove template tags and their contents (which often contain CSS/JS)
+    html = re.sub(r'<template[^>]*>.*?</template>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+    # Remove style tags and their contents
+    html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+    # Remove script tags and their contents
+    html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+    # Remove SVG tags and their contents
+    html = re.sub(r'<svg[^>]*>.*?</svg>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+    return html
+
+
 def html2text(html: str) -> str:
     """Convert HTML to text using markdownify.
 
@@ -133,6 +163,9 @@ def html2text(html: str) -> str:
     Returns:
         str: The text converted from the HTML
     """
+    # Pre-process to remove problematic elements
+    html = preprocess_html(html)
+
     markdown = md(html, **markdownify_options)
     transformed = transform_markdown(markdown)
     return clean_text_for_tts(transformed)
@@ -173,18 +206,20 @@ def get_episode_dict(bookmark: dict) -> dict:
     content = bookmark["content"]
     url = content["url"]
 
-    newspaper_data = parse_with_newspaper(url)
-
     # Get HTML content - either from inline htmlContent or from asset
     html_content = content.get("htmlContent")
     if not html_content:
         # For SingleFile articles, content is stored as an asset
-        # Try contentAssetId first, then precrawledArchiveAssetId
-        asset_id = content.get("contentAssetId") or content.get("precrawledArchiveAssetId")
+        # Try precrawledArchiveAssetId first (full page), then contentAssetId
+        asset_id = content.get("precrawledArchiveAssetId") or content.get("contentAssetId")
         if asset_id:
             print(f"Fetching asset content for bookmark {bookmark['id']}, asset {asset_id}")
             html_content = fetch_asset_content(asset_id)
 
+    # Try newspaper extraction - if we have HTML content from asset, use it; otherwise download from URL
+    newspaper_data = parse_with_newspaper(url, html=html_content if html_content else None)
+
+    # Fall back to our HTML-to-text conversion if newspaper fails
     html2text_text = html2text(html_content) if html_content else ""
 
     # todo - use llm to describe images see ImageBlockConverter

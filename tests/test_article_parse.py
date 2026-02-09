@@ -175,9 +175,14 @@ def test_get_episode_dict_with_asset_content(mock_html2text, mock_newspaper, moc
     assert result["title"] == "Gmail Article"
     assert result["text"] == "Full SingleFile article content here with lots of text"
 
-    # Verify asset was fetched
-    mock_fetch_asset.assert_called_once_with("bc595762-5424-4ed8-8a08-487ebb00634e")
-    mock_html2text.assert_called_once_with("<html><body>Full SingleFile article content here</body></html>")
+    # Verify asset was fetched (precrawledArchiveAssetId is preferred over contentAssetId)
+    mock_fetch_asset.assert_called_once_with("91adcf83-bc10-4a44-87ea-893f60e57bd0")
+
+    # Verify newspaper was called with the HTML content
+    mock_newspaper.assert_called_once()
+    call_args = mock_newspaper.call_args
+    assert call_args[0][0] == "https://example.com/article"  # URL argument
+    assert call_args[1]["html"] == "<html><body>Full SingleFile article content here</body></html>"  # html kwarg
 
 
 @patch("hoarderpod.article_parse.fetch_asset_content")
