@@ -58,6 +58,15 @@ def test_clean_text_for_tts():
     assert "\u201d" not in cleaned
     assert '"Quoted text" here' in cleaned
 
+    # Test mojibake fix - UTF-8 bytes decoded as Latin-1
+    # â€™ is what you get when UTF-8 bytes for ' (curly apostrophe) are decoded as Latin-1
+    text_with_mojibake = "Companyâ\x80\x99s didn\xe2\x80\x99t work"
+    cleaned = clean_text_for_tts(text_with_mojibake)
+    assert "Company's" in cleaned or "Company'" in cleaned  # Should fix to proper apostrophe
+    assert "didn't" in cleaned or "didn'" in cleaned
+    assert "\x80" not in cleaned
+    assert "\x99" not in cleaned
+
 
 def test_html2text_cleans_nbsp_entities():
     """Test that HTML entities like &nbsp; are properly cleaned for TTS."""

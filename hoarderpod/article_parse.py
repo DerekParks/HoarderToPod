@@ -1,6 +1,7 @@
 import re
 import unicodedata
 
+import ftfy
 import newspaper
 import requests
 from markdownify import MarkdownConverter
@@ -104,8 +105,9 @@ def parse_with_newspaper(url: str, html: str | None = None) -> dict:
 def clean_text_for_tts(text: str) -> str:
     """Clean text to remove characters that cause issues with TTS.
 
-    Uses Unicode normalization (NFKC) to systematically handle most compatibility
-    characters, plus targeted replacements for punctuation that affects TTS.
+    Fixes mojibake (encoding errors), then uses Unicode normalization (NFKC) to
+    systematically handle most compatibility characters, plus targeted replacements
+    for punctuation that affects TTS.
 
     Args:
         text: The text to clean
@@ -113,6 +115,10 @@ def clean_text_for_tts(text: str) -> str:
     Returns:
         str: The cleaned text safe for TTS
     """
+    # Step 0: Fix mojibake (encoding errors like â€™ → ')
+    # This handles cases where UTF-8 bytes were decoded as Latin-1
+    text = ftfy.fix_text(text)
+
     # Step 1: NFKC normalization handles compatibility characters automatically
     # This converts: non-breaking spaces, full-width characters, ligatures, etc.
     text = unicodedata.normalize('NFKC', text)
