@@ -1,6 +1,6 @@
 from unittest.mock import Mock, patch
 
-from hoarderpod.article_parse import transform_markdown, fetch_asset_content, get_episode_dict, clean_text_for_tts, html2text
+from hoarderpod.article_parse import transform_markdown, fetch_asset_content, get_episode_dict, clean_text_for_tts, html2text, preprocess_html
 
 
 def test_markdown_strip_test():
@@ -77,6 +77,87 @@ def test_html2text_cleans_nbsp_entities():
     assert "\xa0" not in result
     # Should contain the actual text with regular spaces
     assert "This has nbsp entities" in result
+
+
+def test_preprocess_html_strips_non_content():
+    """Test that preprocess_html strips comments, footers, recommended articles, etc."""
+    html = """
+    <html>
+    <body>
+        <article>
+            <div class="body markup"><p>This is the real article content.</p></div>
+            <div class="comments-section"><p>User comment here</p></div>
+            <div class="subscription-widget"><p>Subscribe now!</p></div>
+            <footer><p>Copyright 2026</p></footer>
+            <div class="portable-archive"><a>Recommended Article 1</a><a>Recommended Article 2</a></div>
+            <div class="post-ufi-button">Like</div>
+        </article>
+        <nav><a>Home</a></nav>
+    </body>
+    </html>
+    """
+    result = preprocess_html(html)
+    assert "real article content" in result
+    assert "User comment" not in result
+    assert "Subscribe now" not in result
+    assert "Copyright" not in result
+    assert "Recommended Article" not in result
+    assert "Like" not in result
+    assert "Home" not in result
+
+
+def test_preprocess_html_strips_gmail_chrome():
+    """Test that Gmail print-view chrome is stripped."""
+    html = """
+    <html><body>
+    <div class="bodycontainer">
+        <table><tr><td>Derek Parks &lt;dnparks@gmail.com&gt;</td></tr></table>
+        <hr>
+        <div class="maincontent">
+            <table><tr><td>Money Stuff: Be Liquid<br>1 message</td></tr></table>
+            <hr>
+            <table class="message"><tbody><tr><td>
+                <font>Matt Levine &lt;noreply@news.bloomberg.com&gt;</font>
+                <div>The actual newsletter content goes here.</div>
+            </td></tr></tbody></table>
+        </div>
+    </div>
+    </body></html>
+    """
+    result = preprocess_html(html)
+    assert "actual newsletter content" in result
+    # User email table and subject table are stripped
+    assert "Derek Parks" not in result
+    assert "1 message" not in result
+    # Sender font tag is stripped
+    assert "noreply@news.bloomberg.com" not in result
+
+
+def test_clean_text_for_tts_strips_email_addresses():
+    """Test that email addresses are removed from TTS text."""
+    text = "Contact us at support@example.com for help. Written by author@blog.org."
+    cleaned = clean_text_for_tts(text)
+    assert "support@example.com" not in cleaned
+    assert "author@blog.org" not in cleaned
+    assert "Contact us at" in cleaned
+
+
+def test_clean_text_for_tts_strips_newsletter_boilerplate():
+    """Test that newsletter boilerplate lines are removed."""
+    text = "Great article content here.\nUnsubscribe from this list\nView in browser\nMore content."
+    cleaned = clean_text_for_tts(text)
+    assert "Great article content" in cleaned
+    assert "More content" in cleaned
+    assert "Unsubscribe" not in cleaned
+    assert "View in browser" not in cleaned
+
+
+def test_clean_text_for_tts_strips_table_separators():
+    """Test that markdown table separators are cleaned up."""
+    text = "Some text | --- | --- | --- | more text"
+    cleaned = clean_text_for_tts(text)
+    assert "| --- |" not in cleaned
+    assert "Some text" in cleaned
 
 
 @patch("hoarderpod.article_parse.requests.get")

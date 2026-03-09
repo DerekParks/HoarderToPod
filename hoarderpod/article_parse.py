@@ -4,6 +4,7 @@ import unicodedata
 import ftfy
 import newspaper
 import requests
+from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
 
 from hoarderpod.utils import horder_dt_to_py
@@ -144,14 +145,70 @@ def clean_text_for_tts(text: str) -> str:
     for unicode_char, ascii_char in quote_replacements.items():
         text = text.replace(unicode_char, ascii_char)
 
-    # Step 3: Collapse multiple spaces
+    # Step 3: Remove email addresses (privacy + TTS noise)
+    text = re.sub(r'\S+@\S+\.\S+', '', text)
+
+    # Step 4: Remove common newsletter/email boilerplate lines
+    text = re.sub(r'^.*(?:Unsubscribe|View in browser|Reply-To:|You received this message because).*$',
+                  '', text, flags=re.MULTILINE | re.IGNORECASE)
+
+    # Step 5: Clean up markdown table separators (| --- | --- | ...)
+    text = re.sub(r'(\|\s*---\s*)+\|?', '', text)
+
+    # Step 6: Collapse multiple spaces and blank lines
     text = re.sub(r' +', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
 
     return text
 
 
+# Classes/IDs that indicate non-article content to strip before TTS
+_STRIP_CLASS_PATTERNS = re.compile(
+    r'comment|footer|sidebar|related|recommend|subscription|subscribe|'
+    r'portable-archive|navigation|share-dialog|social-share|post-ufi|'
+    r'restack|like-button|pencraft.*footer',
+    re.IGNORECASE,
+)
+
+
+def _strip_gmail_chrome(soup: BeautifulSoup) -> None:
+    """Strip Gmail print-view chrome (email headers, user info) from the soup.
+
+    Detects Gmail print layout by looking for the 'maincontent' class and
+    'table.message' structure. Removes the user's email display, subject line
+    table, and email header rows (From, To, Date, Reply-To).
+    """
+    maincontent = soup.find(class_='maincontent')
+    if not maincontent:
+        return
+
+    # Remove the user email table above maincontent (inside bodycontainer)
+    bodycontainer = soup.find(class_='bodycontainer')
+    if bodycontainer:
+        for table in bodycontainer.find_all('table', recursive=False):
+            if table != maincontent and maincontent not in table.descendants:
+                table.decompose()
+
+    # Remove the subject line table inside maincontent (before the message table)
+    msg_table = maincontent.find('table', class_='message')
+    if msg_table:
+        for table in maincontent.find_all('table', recursive=False):
+            if table != msg_table:
+                table.decompose()
+
+        # Inside the message, strip sender <font> tags (contain "Name <email>")
+        for font in msg_table.find_all('font', recursive=True):
+            text = font.get_text()
+            if re.search(r'<[^>]*@[^>]*>', text):
+                font.decompose()
+
+
 def preprocess_html(html: str) -> str:
     """Remove problematic HTML elements before markdown conversion.
+
+    Strips scripts, styles, templates, SVGs, and non-article sections like
+    comments, footers, recommended articles, subscription widgets, and
+    Gmail print-view chrome.
 
     Args:
         html: The raw HTML to preprocess
@@ -159,19 +216,28 @@ def preprocess_html(html: str) -> str:
     Returns:
         str: HTML with problematic elements removed
     """
-    # Remove template tags and their contents (which often contain CSS/JS)
+    # Step 1: Fast regex removal for elements that are always noise
     html = re.sub(r'<template[^>]*>.*?</template>', '', html, flags=re.DOTALL | re.IGNORECASE)
-
-    # Remove style tags and their contents
     html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
-
-    # Remove script tags and their contents
     html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
-
-    # Remove SVG tags and their contents
     html = re.sub(r'<svg[^>]*>.*?</svg>', '', html, flags=re.DOTALL | re.IGNORECASE)
 
-    return html
+    # Step 2: Use BeautifulSoup to remove non-article sections
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # Strip Gmail print-view chrome if detected
+    _strip_gmail_chrome(soup)
+
+    # Remove semantic HTML5 elements that aren't article content
+    for tag_name in ['footer', 'nav', 'aside']:
+        for el in soup.find_all(tag_name):
+            el.decompose()
+
+    # Remove elements whose class matches non-content patterns
+    for el in soup.find_all(class_=_STRIP_CLASS_PATTERNS):
+        el.decompose()
+
+    return str(soup)
 
 
 def html2text(html: str) -> str:
