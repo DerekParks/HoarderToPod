@@ -182,11 +182,14 @@ def tts_pending_and_completed_update() -> None:
 def reconcile_tts_state_on_boot() -> None:
     """Reconcile local TTS job state against the TTS service at startup.
 
-    Runs unconditionally (not gated on pending work) so that stale local
-    job ids from a previous TTS host reboot get cleared even if there's
-    nothing new to submit this cycle.
+    Only runs if there are in-flight jobs to check on, so we don't wake
+    the TTS host every container restart for nothing. Uses WoL so a
+    sleeping host still gets reconciled.
     """
-    if not tts_service.check_health():
+    if not episode_ops.has_submitted_tts_jobs():
+        print("Boot reconcile: no in-flight TTS jobs, skipping")
+        return
+    if not tts_service.wake_and_wait_healthy():
         print("Boot reconcile: TTS service not reachable, skipping")
         return
     print("Boot reconcile: checking for stale TTS job ids")

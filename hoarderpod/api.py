@@ -16,11 +16,25 @@ from hoarderpod.tts_service import TTSService
 # Initialize TTS service to get MP3_STORAGE_PATH
 tts_service = TTSService()
 
-reconcile_tts_state_on_boot()
+# In Flask dev mode the auto-reloader imports this module twice (parent
+# watcher + child). Only start the scheduler + reconcile in the child, or
+# when not running under the reloader at all (e.g. waitress in prod).
+_flask_env = (Config.FLASK_ENV or "").lower()
+_in_reloader_parent = _flask_env.startswith("dev") and os.environ.get("WERKZEUG_RUN_MAIN") != "true"
 
-sched = BackgroundScheduler(daemon=True)
-sched.add_job(poll_hoarder_and_tts, "interval", minutes=Config.POLL_INTERVAL_MINUTES)
-sched.start()
+if not _in_reloader_parent:
+    reconcile_tts_state_on_boot()
+
+    sched = BackgroundScheduler(daemon=True)
+    sched.add_job(
+        poll_hoarder_and_tts,
+        "interval",
+        minutes=Config.POLL_INTERVAL_MINUTES,
+        coalesce=True,
+        max_instances=1,
+        misfire_grace_time=None,
+    )
+    sched.start()
 
 app = Flask(__name__)
 episode_ops = EpisodeOps()
