@@ -173,9 +173,24 @@ def tts_pending_and_completed_update() -> None:
     completed_jobs = filter_job_ids_to_ones_we_know_about(completed_jobs)
 
     download_completed_tts_jobs(completed_jobs)
-    nulled_tts_jobs = episode_ops.null_episodes_that_tts_doesnt_know_about(ongoing_jobs)
+    known_jobs = set(completed_jobs) | set(ongoing_jobs)
+    nulled_tts_jobs = episode_ops.null_episodes_that_tts_doesnt_know_about(known_jobs)
     for episode_id, tts_job_id in nulled_tts_jobs:
-        print(f"Episode {episode_id} has a job id {tts_job_id} but the TTS service doesn't know about it.")
+        print(f"Episode {episode_id} had job id {tts_job_id} but the TTS service doesn't know about it; will retry.")
+
+
+def reconcile_tts_state_on_boot() -> None:
+    """Reconcile local TTS job state against the TTS service at startup.
+
+    Runs unconditionally (not gated on pending work) so that stale local
+    job ids from a previous TTS host reboot get cleared even if there's
+    nothing new to submit this cycle.
+    """
+    if not tts_service.check_health():
+        print("Boot reconcile: TTS service not reachable, skipping")
+        return
+    print("Boot reconcile: checking for stale TTS job ids")
+    tts_pending_and_completed_update()
 
 
 def main_poll_loop(cutoff_date: datetime | None = None, max_episodes: int | None = None) -> None:

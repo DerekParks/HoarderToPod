@@ -61,6 +61,9 @@ class TTSService:
     def get_jobs(self) -> tuple[list[str], list[str]]:
         """Get the TTS jobs from the TTS service.
 
+        Jobs in a failed/error state are omitted so the caller treats
+        them as gone and retries them from scratch.
+
         Returns:
             tuple[list[str], list[str]]: The list of completed and ongoing TTS jobs
         """
@@ -70,8 +73,11 @@ class TTSService:
         completed_jobs = []
         ongoing_jobs = []
         for job in res_json:
-            if job["status"].lower() == "completed":
+            status = job["status"].lower()
+            if status == "completed":
                 completed_jobs.append(job["job_id"])
+            elif status in ("failed", "error"):
+                continue
             else:
                 ongoing_jobs.append(job["job_id"])
 

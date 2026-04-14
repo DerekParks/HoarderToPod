@@ -87,22 +87,29 @@ class EpisodeOps:
         with Session() as session:
             return {episode.tts_job_id for episode in session.query(Episode).all() if episode.tts_job_id}
 
-    def null_episodes_that_tts_doesnt_know_about(self, ongoing_jobs: set[str]) -> list[tuple[str, str]]:
-        """As a failsafe, make sure the TTS service still knows about episodes that have a job id but no mp3.
+    def null_episodes_that_tts_doesnt_know_about(self, known_jobs: set[str]) -> list[tuple[str, str]]:
+        """Null the tts_job_id of local episodes whose job the TTS service no longer tracks.
 
         Args:
-            ongoing_jobs: The list of ongoing jobs
+            known_jobs: The set of job ids the TTS service currently reports
+                (union of completed and ongoing; failed/errored jobs should
+                be excluded so they get retried).
 
         Returns:
-            list[tuple[str, str]]: The list of episodes that have a job id but no mp3
+            list[tuple[str, str]]: (episode_id, old_job_id) pairs that were nulled.
         """
         result = []
         with Session() as session:
-            waiting_episodes = session.query(Episode).filter(Episode.tts_job_id != None, Episode.mp3 == None)
+            waiting_episodes = (
+                session.query(Episode)
+                .filter(Episode.tts_job_id != None, Episode.mp3 == None)
+                .all()
+            )
             for episode in waiting_episodes:
-                if episode.tts_job_id not in ongoing_jobs:
+                if episode.tts_job_id not in known_jobs:
+                    old_id = episode.tts_job_id
                     episode.tts_job_id = None
-                    result.append((episode.id, episode.tts_job_id))
+                    result.append((episode.id, old_id))
             session.commit()
         return result
 

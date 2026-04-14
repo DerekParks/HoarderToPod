@@ -60,6 +60,22 @@ def test_get_jobs(requests_mock, tts_service):
     assert completed == ["job1", "job3"]
     assert ongoing == ["job2"]
 
+
+def test_get_jobs_excludes_failed_and_error(requests_mock, tts_service):
+    mock_response = {
+        "jobs": [
+            {"job_id": "done", "status": "completed"},
+            {"job_id": "running", "status": "processing"},
+            {"job_id": "broken", "status": "failed"},
+            {"job_id": "busted", "status": "ERROR"},
+        ]
+    }
+    requests_mock.get(tts_service.jobs_path, json=mock_response)
+
+    completed, ongoing = tts_service.get_jobs()
+    assert completed == ["done"]
+    assert ongoing == ["running"]
+
 def test_download_mp3(requests_mock, tts_service, tmp_path):
     job_id = "test-job-123"
     test_content = b"fake mp3 content"

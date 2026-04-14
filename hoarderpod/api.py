@@ -10,11 +10,13 @@ from flask_restx import Api, Resource, fields
 
 from hoarderpod.config import Config
 from hoarderpod.episodes import EpisodeOps
-from hoarderpod.run import gen_feed, poll_hoarder_and_tts
+from hoarderpod.run import gen_feed, poll_hoarder_and_tts, reconcile_tts_state_on_boot
 from hoarderpod.tts_service import TTSService
 
 # Initialize TTS service to get MP3_STORAGE_PATH
 tts_service = TTSService()
+
+reconcile_tts_state_on_boot()
 
 sched = BackgroundScheduler(daemon=True)
 sched.add_job(poll_hoarder_and_tts, "interval", minutes=Config.POLL_INTERVAL_MINUTES)
