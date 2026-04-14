@@ -68,6 +68,16 @@ class EpisodeOps:
         with Session() as session:
             return session.query(Episode).filter(Episode.tts_job_id == None).order_by(Episode.created_at.asc()).all()
 
+    def has_submitted_tts_jobs(self) -> bool:
+        """Return True if there are episodes with a TTS job id but no mp3 yet."""
+        with Session() as session:
+            return (
+                session.query(Episode)
+                .filter(Episode.tts_job_id != None, Episode.mp3 == None)
+                .first()
+                is not None
+            )
+
     def get_job_ids(self) -> set[str]:
         """Get the episode with a TTS job id.
 

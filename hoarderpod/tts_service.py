@@ -3,8 +3,10 @@ Service for interacting with the TTS service
 """
 
 import os
+import time
 
 import requests
+from wakeonlan import send_magic_packet
 
 from hoarderpod.config import Config
 
@@ -102,5 +104,38 @@ class TTSService:
 
     def check_health(self) -> bool:
         """Check the health of the TTS service."""
-        response = requests.get(self.health_path)
+        try:
+            response = requests.get(self.health_path, timeout=5)
+        except requests.exceptions.RequestException as e:
+            print(f"TTS health check failed: {e}")
+            return False
         return response.status_code == 200
+
+    def wake_and_wait_healthy(self) -> bool:
+        """Ensure the TTS host is healthy, sending a WoL magic packet if needed.
+
+        Returns True if healthy (either initially or after wake), False otherwise.
+        """
+        if self.check_health():
+            return True
+
+        if not Config.TTS_WOL_ENABLED:
+            return False
+
+        for attempt in range(1, Config.TTS_WOL_MAX_RETRIES + 1):
+            print(
+                f"Sending WoL magic packet to {Config.TTS_WOL_MAC} "
+                f"(attempt {attempt}/{Config.TTS_WOL_MAX_RETRIES})"
+            )
+            send_magic_packet(
+                Config.TTS_WOL_MAC,
+                ip_address=Config.TTS_WOL_BROADCAST,
+                port=Config.TTS_WOL_PORT,
+            )
+            time.sleep(Config.TTS_WOL_RETRY_DELAY)
+            if self.check_health():
+                print(f"TTS host is healthy after {attempt} wake attempt(s)")
+                return True
+
+        print(f"TTS host did not wake after {Config.TTS_WOL_MAX_RETRIES} attempts")
+        return False

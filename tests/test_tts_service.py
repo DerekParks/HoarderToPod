@@ -1,4 +1,5 @@
 import os
+from unittest.mock import patch
 
 import pytest
 import requests
@@ -100,6 +101,74 @@ def test_check_health_success(requests_mock, tts_service):
 def test_check_health_failure(requests_mock, tts_service):
     requests_mock.get(tts_service.health_path, status_code=500)
     assert tts_service.check_health() is False
+
+
+def test_check_health_connection_error(requests_mock, tts_service):
+    requests_mock.get(
+        tts_service.health_path,
+        exc=requests.exceptions.ConnectionError,
+    )
+    assert tts_service.check_health() is False
+
+
+def test_wake_and_wait_healthy_initially_healthy(requests_mock, tts_service):
+    requests_mock.get(tts_service.health_path, status_code=200)
+    with patch("hoarderpod.tts_service.send_magic_packet") as mock_wol:
+        assert tts_service.wake_and_wait_healthy() is True
+        mock_wol.assert_not_called()
+
+
+def test_wake_and_wait_healthy_disabled(requests_mock, tts_service, monkeypatch):
+    monkeypatch.setattr(Config, "TTS_WOL_ENABLED", False)
+    requests_mock.get(tts_service.health_path, status_code=500)
+    with patch("hoarderpod.tts_service.send_magic_packet") as mock_wol:
+        assert tts_service.wake_and_wait_healthy() is False
+        mock_wol.assert_not_called()
+
+
+def test_wake_and_wait_healthy_wakes_successfully(requests_mock, tts_service, monkeypatch):
+    monkeypatch.setattr(Config, "TTS_WOL_ENABLED", True)
+    monkeypatch.setattr(Config, "TTS_WOL_MAC", "aa:bb:cc:dd:ee:ff")
+    monkeypatch.setattr(Config, "TTS_WOL_BROADCAST", "255.255.255.255")
+    monkeypatch.setattr(Config, "TTS_WOL_PORT", 9)
+    monkeypatch.setattr(Config, "TTS_WOL_RETRY_DELAY", 0)
+    monkeypatch.setattr(Config, "TTS_WOL_MAX_RETRIES", 3)
+
+    requests_mock.get(
+        tts_service.health_path,
+        [
+            {"status_code": 500},
+            {"status_code": 500},
+            {"status_code": 200},
+        ],
+    )
+
+    with patch("hoarderpod.tts_service.send_magic_packet") as mock_wol, \
+         patch("hoarderpod.tts_service.time.sleep") as mock_sleep:
+        assert tts_service.wake_and_wait_healthy() is True
+        assert mock_wol.call_count == 2
+        mock_wol.assert_called_with(
+            "aa:bb:cc:dd:ee:ff",
+            ip_address="255.255.255.255",
+            port=9,
+        )
+        assert mock_sleep.call_count == 2
+
+
+def test_wake_and_wait_healthy_gives_up(requests_mock, tts_service, monkeypatch):
+    monkeypatch.setattr(Config, "TTS_WOL_ENABLED", True)
+    monkeypatch.setattr(Config, "TTS_WOL_MAC", "aa:bb:cc:dd:ee:ff")
+    monkeypatch.setattr(Config, "TTS_WOL_BROADCAST", "255.255.255.255")
+    monkeypatch.setattr(Config, "TTS_WOL_PORT", 9)
+    monkeypatch.setattr(Config, "TTS_WOL_RETRY_DELAY", 0)
+    monkeypatch.setattr(Config, "TTS_WOL_MAX_RETRIES", 2)
+
+    requests_mock.get(tts_service.health_path, status_code=500)
+
+    with patch("hoarderpod.tts_service.send_magic_packet") as mock_wol, \
+         patch("hoarderpod.tts_service.time.sleep"):
+        assert tts_service.wake_and_wait_healthy() is False
+        assert mock_wol.call_count == 2
 
 def test_root_url_trailing_slash(mock_config):
     Config.TTS_ROOT_URL = 'http://test-tts-service.com/'

@@ -8,3 +8,4 @@ APScheduler==3.11.0
 waitress==3.0.2
 markdownify==0.14.1
 ftfy==6.3.1
+wakeonlan==3.1.0

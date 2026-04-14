@@ -13,6 +13,16 @@ class Config:
     TTS_ROOT_URL = os.getenv("TTS_ROOT_URL", "http://localhost:5001")
     TTS_MODEL = os.getenv("TTS_MODEL", "kokoro")
     TTS_VOICE = os.getenv("TTS_VOICE", "af_heart")
+
+    TTS_WOL_ENABLED = os.getenv("TTS_WOL_ENABLED", "false").lower() == "true"
+    TTS_WOL_MAC = os.getenv("TTS_WOL_MAC", "")
+    TTS_WOL_BROADCAST = os.getenv("TTS_WOL_BROADCAST", "255.255.255.255")
+    TTS_WOL_PORT = int(os.getenv("TTS_WOL_PORT", "9"))
+    TTS_WOL_RETRY_DELAY = int(os.getenv("TTS_WOL_RETRY_DELAY", "30"))
+    TTS_WOL_MAX_RETRIES = int(os.getenv("TTS_WOL_MAX_RETRIES", "6"))
+
+    if TTS_WOL_ENABLED:
+        assert TTS_WOL_MAC, "TTS_WOL_MAC must be set when TTS_WOL_ENABLED is true"
     MP3_STORAGE_PATH = os.path.join(os.path.dirname(__file__), os.getenv("MP3_STORAGE_PATH", "../audio"))
     POLL_INTERVAL_MINUTES = int(os.getenv("POLL_INTERVAL_MINUTES", "10"))
     FLASK_ENV = os.getenv("FLASK_ENV")

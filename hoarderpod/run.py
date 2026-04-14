@@ -194,15 +194,26 @@ def main_poll_loop(cutoff_date: datetime | None = None, max_episodes: int | None
 
     update_db_with_new_episodes(hoarder_service.get_bookmarks(cutoff_date, max_episodes))
 
-    if tts_service.check_health():
-        tts_pending_and_completed_update()
+    episodes_to_tts = episode_ops.get_episodes_to_tts()[: Config.TTS_BATCH_SIZE]
+    has_new_work = len(episodes_to_tts) > 0
+    has_inflight = episode_ops.has_submitted_tts_jobs()
 
-        episodes_to_tts = episode_ops.get_episodes_to_tts()[: Config.TTS_BATCH_SIZE]
+    if not has_new_work and not has_inflight:
+        print("No pending or in-flight TTS work, skipping TTS health check")
+        return
 
-        submit_tts_request_for_episodes(episodes_to_tts)
-
+    if has_new_work:
+        healthy = tts_service.wake_and_wait_healthy()
     else:
+        healthy = tts_service.check_health()
+
+    if not healthy:
         print("TTS service is not healthy, skipping TTS request")
+        return
+
+    tts_pending_and_completed_update()
+    if has_new_work:
+        submit_tts_request_for_episodes(episodes_to_tts)
 
 
 def poll_hoarder_and_tts():
