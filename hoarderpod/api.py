@@ -2,6 +2,7 @@
 API for polling hoarder and generating podcast feed
 """
 
+import math
 import os
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -37,14 +38,24 @@ if not _in_reloader_parent:
     sched.start()
 
 app = Flask(__name__)
+DEFAULT_PER_PAGE = 50
+MAX_PER_PAGE = 500
 episode_ops = EpisodeOps()
 
 
 @app.route("/")
 def show_episodes():
     """Show episodes list in HTML format"""
-    episodes = episode_ops.get_all_episodes(sort_by_created_at=True)
-    return render_template("episodes.html", episodes=episodes)
+    per_page = min(max(request.args.get("per_page", DEFAULT_PER_PAGE, type=int), 1), MAX_PER_PAGE)
+    page = max(request.args.get("page", 1, type=int), 1)
+    episodes, total = episode_ops.get_episodes_page(page, per_page)
+    page_count = max(math.ceil(total / per_page), 1)
+    if page > page_count:
+        page = page_count
+        episodes, total = episode_ops.get_episodes_page(page, per_page)
+    return render_template(
+        "episodes.html", episodes=episodes, page=page, page_count=page_count, per_page=per_page, total=total
+    )
 
 
 api = Api(

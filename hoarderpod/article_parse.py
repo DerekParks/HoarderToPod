@@ -4,7 +4,7 @@ import unicodedata
 import ftfy
 import newspaper
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, UnicodeDammit
 from markdownify import MarkdownConverter
 
 from hoarderpod.utils import horder_dt_to_py
@@ -257,6 +257,13 @@ def html2text(html: str) -> str:
     return clean_text_for_tts(transformed)
 
 
+def decode_html_response(response: requests.Response) -> str:
+    """Decode an HTML response body, preferring a header charset, then the document's own <meta charset>."""
+    has_header_charset = "charset=" in response.headers.get("Content-Type", "").lower()
+    known_encodings = [response.encoding] if has_header_charset else []
+    return UnicodeDammit(response.content, known_definite_encodings=known_encodings, is_html=True).unicode_markup
+
+
 def fetch_asset_content(asset_id: str) -> str | None:
     """Fetch HTML content from Hoarder asset API.
 
@@ -274,7 +281,7 @@ def fetch_asset_content(asset_id: str) -> str | None:
         }
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        return response.text
+        return decode_html_response(response)
     except Exception as e:
         print(f"Error fetching asset {asset_id}: {e}")
         return None
@@ -295,9 +302,8 @@ def get_episode_dict(bookmark: dict) -> dict:
     # Get HTML content - either from inline htmlContent or from asset
     html_content = content.get("htmlContent")
     if not html_content:
-        # For SingleFile articles, content is stored as an asset
-        # Try precrawledArchiveAssetId first (full page), then contentAssetId
-        asset_id = content.get("precrawledArchiveAssetId") or content.get("contentAssetId")
+        # contentAssetId is Karakeep's reader view; precrawledArchiveAssetId is the full SingleFile page
+        asset_id = content.get("contentAssetId") or content.get("precrawledArchiveAssetId")
         if asset_id:
             print(f"Fetching asset content for bookmark {bookmark['id']}, asset {asset_id}")
             html_content = fetch_asset_content(asset_id)
@@ -337,7 +343,7 @@ def get_episode_dict(bookmark: dict) -> dict:
         "title": title,
         "description": description,
         "text": text,
-        "authors": newspaper_data["authors"],
+        "authors": newspaper_data["authors"] or ([content["author"]] if content.get("author") else []),
         "url": url,
         "createdAt": horder_dt_to_py(bookmark["createdAt"]),
         "crawledAt": horder_dt_to_py(bookmark["content"]["crawledAt"]),

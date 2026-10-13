@@ -4,7 +4,7 @@ Main logic/glue for polling hoarder and generating podcast feed
 """
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from feedgen.feed import FeedGenerator
 
@@ -196,6 +196,28 @@ def reconcile_tts_state_on_boot() -> None:
     tts_pending_and_completed_update()
 
 
+def retention_cutoff() -> datetime | None:
+    """The UTC datetime before which episodes are aged off, or None when retention is disabled."""
+    if not Config.EPISODE_RETENTION_DAYS:
+        return None
+    return datetime.now(timezone.utc) - timedelta(days=Config.EPISODE_RETENTION_DAYS)
+
+
+def age_off_episodes(cutoff: datetime) -> None:
+    """Delete episodes created before the cutoff along with their mp3 files.
+
+    Args:
+        cutoff: The UTC datetime before which episodes are deleted
+    """
+    mp3s = episode_ops.delete_episodes_created_before(cutoff.replace(tzinfo=None))
+    for mp3 in filter(None, mp3s):
+        mp3_path = os.path.join(tts_service.mp3_storage_path, mp3)
+        if os.path.exists(mp3_path):
+            os.remove(mp3_path)
+    if mp3s:
+        print(f"Aged off {len(mp3s)} episodes created before {cutoff}")
+
+
 def main_poll_loop(cutoff_date: datetime | None = None, max_episodes: int | None = None) -> None:
     """Main function to run the script.
 
@@ -204,10 +226,13 @@ def main_poll_loop(cutoff_date: datetime | None = None, max_episodes: int | None
         max_episodes: The maximum number of episodes to update the database with
     """
 
+    retention_date = retention_cutoff()
+    if retention_date:
+        age_off_episodes(retention_date)
+
     last_episode_date = episode_ops.get_latest_episode_date() or datetime.fromtimestamp(0, tz=timezone.utc)
     print(f"Last episode date: {last_episode_date}")
-    if cutoff_date is None or last_episode_date > cutoff_date:
-        cutoff_date = last_episode_date
+    cutoff_date = max(d for d in (cutoff_date, last_episode_date, retention_date) if d is not None)
     print(f"Cutoff date: {cutoff_date}")
 
     update_db_with_new_episodes(hoarder_service.get_bookmarks(cutoff_date, max_episodes))

@@ -1,5 +1,7 @@
 from unittest.mock import Mock, patch
 
+import requests
+
 from hoarderpod.article_parse import transform_markdown, fetch_asset_content, get_episode_dict, clean_text_for_tts, html2text, preprocess_html
 
 
@@ -168,10 +170,7 @@ def test_fetch_asset_content_success(mock_config, mock_requests_get):
     mock_config.HOARDER_ROOT_URL = "http://test.com"
     mock_config.HOARDER_API_KEY = "test-key"
 
-    mock_response = Mock()
-    mock_response.text = "<html><body>Test Article Content</body></html>"
-    mock_response.raise_for_status = Mock()
-    mock_requests_get.return_value = mock_response
+    mock_requests_get.return_value = _html_response(b"<html><body>Test Article Content</body></html>", "text/html")
 
     # Test
     result = fetch_asset_content("test-asset-id")
@@ -185,6 +184,35 @@ def test_fetch_asset_content_success(mock_config, mock_requests_get):
             "Content-Type": "application/json",
         }
     )
+
+
+def _html_response(body: bytes, content_type: str) -> requests.Response:
+    response = requests.Response()
+    response.status_code = 200
+    response._content = body
+    response.headers["Content-Type"] = content_type
+    response.encoding = requests.utils.get_encoding_from_headers(response.headers)
+    return response
+
+
+@patch("hoarderpod.article_parse.requests.get")
+@patch("hoarderpod.article_parse.Config")
+def test_fetch_asset_content_uses_meta_charset_when_header_has_none(mock_config, mock_requests_get):
+    """Karakeep serves assets as bare text/html, which requests would decode as ISO-8859-1."""
+    title = "The \u201cTest\u201d Article\u2019s Title \u00bb Example Site"
+    html = f"<html><head><meta charset=utf-8><title>{title}</title></head><body></body></html>"
+    mock_requests_get.return_value = _html_response(html.encode("utf-8"), "text/html")
+
+    assert fetch_asset_content("test-asset-id") == html
+
+
+@patch("hoarderpod.article_parse.requests.get")
+@patch("hoarderpod.article_parse.Config")
+def test_fetch_asset_content_prefers_header_charset(mock_config, mock_requests_get):
+    html = "<html><head><meta charset=utf-8></head><body>caf\u00e9</body></html>"
+    mock_requests_get.return_value = _html_response(html.encode("latin-1"), "text/html; charset=ISO-8859-1")
+
+    assert fetch_asset_content("test-asset-id") == html
 
 
 @patch("hoarderpod.article_parse.requests.get")
@@ -267,6 +295,7 @@ def test_get_episode_dict_with_asset_content(mock_html2text, mock_newspaper, moc
             "htmlContent": None,  # This is null for SingleFile articles
             "contentAssetId": "bc595762-5424-4ed8-8a08-487ebb00634e",
             "precrawledArchiveAssetId": "91adcf83-bc10-4a44-87ea-893f60e57bd0",
+            "author": "Jane Author",
             "crawledAt": "2026-02-05T16:46:23.000Z"
         }
     }
@@ -278,9 +307,10 @@ def test_get_episode_dict_with_asset_content(mock_html2text, mock_newspaper, moc
     assert result["id"] == "singlefile-id"
     assert result["title"] == "Gmail Article"
     assert result["text"] == "Full SingleFile article content here with lots of text"
+    assert result["authors"] == ["Jane Author"]
 
-    # Verify asset was fetched (precrawledArchiveAssetId is preferred over contentAssetId)
-    mock_fetch_asset.assert_called_once_with("91adcf83-bc10-4a44-87ea-893f60e57bd0")
+    # Verify the reader view (contentAssetId) is preferred over the full-page archive
+    mock_fetch_asset.assert_called_once_with("bc595762-5424-4ed8-8a08-487ebb00634e")
 
     # Verify newspaper was called with the HTML content
     mock_newspaper.assert_called_once()

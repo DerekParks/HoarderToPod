@@ -157,6 +157,38 @@ class EpisodeOps:
             session.commit()
             return result
 
+    def delete_episodes_created_before(self, cutoff: datetime) -> list[str | None]:
+        """Delete episodes created before the cutoff.
+
+        Args:
+            cutoff: Naive UTC datetime; episodes created strictly before it are deleted
+
+        Returns:
+            list[str | None]: The mp3 filename of each deleted episode, None for those without audio
+        """
+        with Session() as session:
+            expired = session.query(Episode).filter(Episode.created_at < cutoff)
+            mp3s = [episode.mp3 for episode in expired]
+            expired.delete()
+            session.commit()
+            return mp3s
+
+    def get_episodes_page(self, page: int, per_page: int) -> tuple[list[Episode], int]:
+        """Get one page of episodes, newest first.
+
+        Args:
+            page: 1-based page number
+            per_page: The number of episodes per page
+
+        Returns:
+            tuple[list[Episode], int]: The episodes on the page and the total episode count
+        """
+        with Session() as session:
+            query = session.query(Episode)
+            total = query.count()
+            episodes = query.order_by(Episode.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+            return episodes, total
+
     def get_all_episodes(self, sort_by_created_at: bool = False) -> list[Episode]:
         """Get all episodes.
 

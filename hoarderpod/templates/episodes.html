@@ -228,6 +228,34 @@
                         </tbody>
                     </table>
                 </div>
+                {% macro page_link(target, label, enabled) %}
+                {% if enabled %}
+                <a
+                    href="?page={{ target }}&amp;per_page={{ per_page }}"
+                    class="px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+                    >{{ label }}</a
+                >
+                {% else %}
+                <span
+                    class="px-3 py-1 rounded border border-gray-200 text-gray-300 cursor-not-allowed"
+                    >{{ label }}</span
+                >
+                {% endif %}
+                {% endmacro %}
+                <nav
+                    class="flex items-center justify-between px-6 py-3 border-t border-gray-200 text-sm"
+                >
+                    <span class="text-gray-500"
+                        >Page {{ page }} of {{ page_count }} &middot; {{ total
+                        }} episodes</span
+                    >
+                    <div class="flex space-x-2">
+                        {{ page_link(1, "First", page > 1) }}
+                        {{ page_link(page - 1, "Prev", page > 1) }}
+                        {{ page_link(page + 1, "Next", page < page_count) }}
+                        {{ page_link(page_count, "Last", page < page_count) }}
+                    </div>
+                </nav>
             </div>
 
             <div

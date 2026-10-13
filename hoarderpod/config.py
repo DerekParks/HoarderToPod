@@ -48,6 +48,9 @@ class Config:
 
     TTS_BATCH_SIZE = int(os.getenv("TTS_BATCH_SIZE", "10"))
     FEED_MAX_EPISODES = int(os.getenv("FEED_MAX_EPISODES", "1000"))
+    EPISODE_RETENTION_DAYS = os.getenv("EPISODE_RETENTION_DAYS")  # Unset keeps episodes forever
+    if EPISODE_RETENTION_DAYS:
+        EPISODE_RETENTION_DAYS = int(EPISODE_RETENTION_DAYS)
     ARCHIVE_PH_DOMAINS = os.getenv("ARCHIVE_PH_DOMAINS") # Comma separated list of domains to scrape from archive.ph
     if ARCHIVE_PH_DOMAINS:
         ARCHIVE_PH_DOMAINS = set(remove_www(domain.strip()) for domain in ARCHIVE_PH_DOMAINS.split(","))
