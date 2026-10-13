@@ -208,6 +208,28 @@ def test_fetch_asset_content_uses_meta_charset_when_header_has_none(mock_config,
 
 @patch("hoarderpod.article_parse.requests.get")
 @patch("hoarderpod.article_parse.Config")
+def test_fetch_asset_content_decodes_undeclared_fragment_as_utf8(mock_config, mock_requests_get):
+    """Karakeep's reader-view assets are bare readability fragments with no charset anywhere."""
+    html = '<div id="readability-page-1"><p>It\u2019s a \u201ctest\u201d \u2014 caf\u00e9</p></div>'
+    mock_requests_get.return_value = _html_response(html.encode("utf-8"), "text/html")
+
+    assert fetch_asset_content("test-asset-id") == html
+
+
+@patch("hoarderpod.article_parse.requests.get")
+@patch("hoarderpod.article_parse.Config")
+def test_fetch_asset_content_falls_back_when_not_utf8(mock_config, mock_requests_get):
+    html = "<div><p>caf\u00e9 na\u00efve r\u00e9sum\u00e9 \u00bb</p></div>"
+    mock_requests_get.return_value = _html_response(html.encode("windows-1252"), "text/html")
+
+    result = fetch_asset_content("test-asset-id")
+
+    assert result.startswith("<div><p>caf\u00e9")
+    assert "\ufffd" not in result
+
+
+@patch("hoarderpod.article_parse.requests.get")
+@patch("hoarderpod.article_parse.Config")
 def test_fetch_asset_content_prefers_header_charset(mock_config, mock_requests_get):
     html = "<html><head><meta charset=utf-8></head><body>caf\u00e9</body></html>"
     mock_requests_get.return_value = _html_response(html.encode("latin-1"), "text/html; charset=ISO-8859-1")

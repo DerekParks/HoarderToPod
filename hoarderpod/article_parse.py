@@ -258,10 +258,12 @@ def html2text(html: str) -> str:
 
 
 def decode_html_response(response: requests.Response) -> str:
-    """Decode an HTML response body, preferring a header charset, then the document's own <meta charset>."""
+    """Decode an HTML response body: header charset, then <meta charset>, then strict UTF-8, then a guess."""
     has_header_charset = "charset=" in response.headers.get("Content-Type", "").lower()
     known_encodings = [response.encoding] if has_header_charset else []
-    return UnicodeDammit(response.content, known_definite_encodings=known_encodings, is_html=True).unicode_markup
+    return UnicodeDammit(
+        response.content, known_definite_encodings=known_encodings, user_encodings=["utf-8"], is_html=True
+    ).unicode_markup
 
 
 def fetch_asset_content(asset_id: str) -> str | None:
